@@ -294,3 +294,40 @@ type TokenDayData @entity {
   # price stats
   priceUSD: BigDecimal!
 }
+
+############################################
+# Badger Entities
+
+type Badge @entity {
+  id: ID!
+  startTimestamp: BigInt!
+  endTimestamp: BigInt!     # -1 -> "ongoing"
+  deltaTWAP: BigDecimal!    # % change in daily price required for badge claim (this actually isn't TWAP yet, it's just Uniswap's daily closing price)
+  minimumStreak: BigInt!    # number of consecutive days required for badge claim
+  currentStreak: BigInt!    # cached current streak count
+  # previousETHPriceUSD: BigDecimal!  # cached ETH TWAP of previous day used for deltaTW calculations (for now)
+  name: String!
+  claims: [BadgeClaim!]! @derivedFrom(field: "badge")   # derived list of ethereum addresses allowed to claim this badge
+  claimPeriods: [BadgeClaimPeriod!]! @derivedFrom(field: "badge")
+}
+
+type BadgeClaim @entity {
+  id: ID!
+  badge: Badge!
+  address: Bytes!
+
+  ## todo - add optional fields for unique NFT generation (for example: streak length)
+}
+
+type BadgeStateManager @entity {
+  id: ID!
+  lastBadgeUpdateTimestamp: BigInt!
+}
+
+type BadgeClaimPeriod @entity {
+  id: ID!
+  startTimestamp: BigInt!
+  endTimestamp: BigInt!
+  badge: Badge!
+  streak: BigInt!
+}

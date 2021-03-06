@@ -24,6 +24,7 @@ import {
   BI_18,
   createLiquiditySnapshot
 } from './helpers'
+import { shouldHandlePair } from './badgerHelpers'
 
 function isCompleteMint(mintId: string): boolean {
   return MintEvent.load(mintId).sender !== null // sufficient checks
@@ -32,6 +33,11 @@ function isCompleteMint(mintId: string): boolean {
 export function handleTransfer(event: Transfer): void {
   // ignore initial transfers for first adds
   if (event.params.to.toHexString() == ADDRESS_ZERO && event.params.value.equals(BigInt.fromI32(1000))) {
+    return
+  }
+
+  // only handle transfers involving badger supported pairs
+  if (shouldHandlePair(event.address.toHexString()) == false) {
     return
   }
 
@@ -211,6 +217,12 @@ export function handleTransfer(event: Transfer): void {
 }
 
 export function handleSync(event: Sync): void {
+
+  // only handle syncs involving badger supported pairs
+  if (shouldHandlePair(event.address.toHexString()) == false) {
+    return
+  }
+
   let pair = Pair.load(event.address.toHex())
   let token0 = Token.load(pair.token0)
   let token1 = Token.load(pair.token1)
@@ -276,6 +288,12 @@ export function handleSync(event: Sync): void {
 }
 
 export function handleMint(event: Mint): void {
+
+  // only index mints for badger-supported pairs
+  if (shouldHandlePair(event.address.toHexString()) == false) {
+    return
+  }
+
   let transaction = Transaction.load(event.transaction.hash.toHexString())
   let mints = transaction.mints
   let mint = MintEvent.load(mints[mints.length - 1])
@@ -331,6 +349,12 @@ export function handleMint(event: Mint): void {
 }
 
 export function handleBurn(event: Burn): void {
+
+  // only index burns for badger-supported pairs
+  if (shouldHandlePair(event.address.toHexString()) == false) {
+    return
+  }
+
   let transaction = Transaction.load(event.transaction.hash.toHexString())
 
   // safety check
@@ -393,6 +417,12 @@ export function handleBurn(event: Burn): void {
 }
 
 export function handleSwap(event: Swap): void {
+  
+  // only index swaps involving badger-supported pairs
+  if (shouldHandlePair(event.address.toHexString()) == false) {
+    return
+  }
+
   let pair = Pair.load(event.address.toHexString())
   let token0 = Token.load(pair.token0)
   let token1 = Token.load(pair.token1)

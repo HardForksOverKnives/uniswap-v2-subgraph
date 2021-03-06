@@ -3,6 +3,7 @@ import { PairHourData } from './../types/schema'
 import { BigInt, BigDecimal, EthereumEvent } from '@graphprotocol/graph-ts'
 import { Pair, Bundle, Token, UniswapFactory, UniswapDayData, PairDayData, TokenDayData } from '../types/schema'
 import { ONE_BI, ZERO_BD, ZERO_BI, FACTORY_ADDRESS } from './helpers'
+import { dayIDFromEvent, updateDailyBadgeStreaks } from './badgerHelpers'
 
 export function updateUniswapDayData(event: EthereumEvent): UniswapDayData {
   let uniswap = UniswapFactory.load(FACTORY_ADDRESS)
@@ -99,8 +100,11 @@ export function updateTokenDayData(token: Token, event: EthereumEvent): TokenDay
     .concat('-')
     .concat(BigInt.fromI32(dayID).toString())
 
-  let tokenDayData = TokenDayData.load(tokenDayID)
+  let tokenDayData = TokenDayData.load(dayIDFromEvent(event, token))
   if (tokenDayData === null) {
+    // new day means we need to check yesterday's change in TWAP and update badge streaks
+    updateDailyBadgeStreaks(event, token)
+
     tokenDayData = new TokenDayData(tokenDayID)
     tokenDayData.date = dayStartTimestamp
     tokenDayData.token = token.id

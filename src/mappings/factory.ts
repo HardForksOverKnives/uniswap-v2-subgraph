@@ -12,8 +12,20 @@ import {
   fetchTokenDecimals,
   fetchTokenTotalSupply
 } from './helpers'
+import { sharedBadgeStateManager } from './badgerHelpers'
+
+
+import {
+  shouldHandlePair
+} from './badgerHelpers'
 
 export function handleNewPair(event: PairCreated): void {
+
+  // only index pairs Badger currently supports
+  if (shouldHandlePair(event.params.pair.toHexString()) == false) {
+    return
+  }
+
   // load factory (create if first exchange)
   let factory = UniswapFactory.load(FACTORY_ADDRESS)
   if (factory === null) {
