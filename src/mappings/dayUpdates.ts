@@ -1,6 +1,6 @@
 import { PairHourData } from './../types/schema'
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, EthereumEvent } from '@graphprotocol/graph-ts'
+import { log, BigInt, BigDecimal, EthereumEvent } from '@graphprotocol/graph-ts'
 import { Pair, Bundle, Token, UniswapFactory, UniswapDayData, PairDayData, TokenDayData } from '../types/schema'
 import { ONE_BI, ZERO_BD, ZERO_BI, FACTORY_ADDRESS } from './helpers'
 import { dayIDFromEvent, updateDailyBadgeStreaks } from './badgerHelpers'
@@ -122,6 +122,8 @@ export function updateTokenDayData(token: Token, event: EthereumEvent): TokenDay
   tokenDayData.dailyTxns = tokenDayData.dailyTxns.plus(ONE_BI)
   tokenDayData.save()
 
+  log.debug("saved tokenDayData with id: {}", [tokenDayData.id.toString()])
+  
   /**
    * @todo test if this speeds up sync
    */
