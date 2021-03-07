@@ -44,23 +44,18 @@ export function sharedInitialBadge(): Badge {
 }
 
 export function dayIDFromEvent(event: EthereumEvent, token: Token): string {
+  return dayIDDaysBack(event, token, BigInt.fromI32(0))
+}
+
+function dayIDDaysBack(event: EthereumEvent, token: Token, daysBack: BigInt): string {
   let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400
-  let dayStartTimestamp = dayID * 86400
+  let dayID = (timestamp / 86400) - daysBack.toI32()
   let tokenDayID = token.id
     .toString()
     .concat('-')
     .concat(BigInt.fromI32(dayID).toString())
 
   return tokenDayID
-}
-
-export function previousDayID(dayID: string): string {
-  // let indexToSplit = dayID.search(dayID)
-  let splitID = dayID.split("-")
-  let previousDay = parseInt(dayID[0])
-  previousDay = previousDay - 86400
-  return previousDay.toString().concat(splitID[1])
 }
 
 export function daysBackFromDay(day: BigInt, daysBack: BigInt): BigInt {
@@ -80,14 +75,16 @@ export function updateDailyBadgeStreaks(event: EthereumEvent, token: Token): voi
     return
   }
 
-  log.debug("updating badge streaks for previous day. token: {}", [token.name])
-
-  let prevDayID = previousDayID(dayIDFromEvent(event, token))
+  let prevDayID = dayIDDaysBack(event, token, BigInt.fromI32(1))
   let previousDay = TokenDayData.load(prevDayID)
-  let dayBeforePreviousDay = TokenDayData.load(previousDayID(prevDayID))
+  let dayBeforePreviousDayID = dayIDDaysBack(event, token, BigInt.fromI32(2))
+  let dayBeforePreviousDay = TokenDayData.load(dayBeforePreviousDayID)
+
+  log.debug("comparing days {} : {}", [prevDayID, dayBeforePreviousDayID])
   if (previousDay != null && dayBeforePreviousDay != null) {
     let priceChange = changeInPrice(dayBeforePreviousDay.priceUSD, previousDay.priceUSD)
     let initialBadge = sharedInitialBadge()
+    log.debug("yesterday's price: {} day before's price: {}\ncomparing price change: {} with delta: {}", [previousDay.priceUSD.toString(), dayBeforePreviousDay.priceUSD.toString(), priceChange.toString(), initialBadge.deltaTWAP.toString()])
     if (changeInPriceSatisfiesBadgeRequirement(priceChange, initialBadge.deltaTWAP)) {
       log.debug("adding 1 to streak", [])
       initialBadge.currentStreak = initialBadge.currentStreak.plus(BigInt.fromI32(1))
@@ -102,10 +99,13 @@ export function updateDailyBadgeStreaks(event: EthereumEvent, token: Token): voi
       initialBadge.save()
     }
     else {
-      log.debug("streak ended", [])
+      log.debug("streak ended at {}", [initialBadge.currentStreak.toString()])
       initialBadge.currentStreak = BigInt.fromI32(0)
       initialBadge.save()
     }
+  }
+  else {
+    log.debug("one of the days was null", [])
   }
 }
 
@@ -122,7 +122,7 @@ function createBadgeClaimPeriod(event: EthereumEvent, badge: Badge): void {
 }
 
 function changeInPrice(price1: BigDecimal, price2: BigDecimal): BigDecimal {
-  return price1.div(price2).minus(BigDecimal.fromString("1").times(BigDecimal.fromString("-1")))
+  return (price1.minus(price2)).div(price1).times(BigDecimal.fromString("-1"))
 }
 
 function changeInPriceSatisfiesBadgeRequirement(priceChange: BigDecimal, badgeRequirement: BigDecimal): boolean {
